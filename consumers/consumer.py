@@ -32,7 +32,8 @@ class KafkaConsumer:
 
         self.broker_properties = {
             "bootstrap.servers": "localhost:9092",
-            'group.id': 'groupid'
+            'group.id': 'groupid',
+            "auto.offset.reset": "earliest"
         }
 
         if is_avro is True:
@@ -62,19 +63,17 @@ class KafkaConsumer:
 
     def _consume(self):
         """Polls for a message. Returns 1 if a message was received, 0 otherwise"""
+        msg = None
         try:
             msg = self.consumer.poll(10)
 
         except SerializerError as e:
             print("Message deserialization failed for {}: {}".format(msg, e))
 
-        if msg is None:
+        if msg is None or msg.error():
             return 0
 
-        elif msg.error():
-            return 0
-
-        logger.info(f"retrieved message {msg.value()}")
+        self.message_handler(msg)
         return 1
 
     def close(self):

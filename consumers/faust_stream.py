@@ -32,7 +32,7 @@ class TransformedStation(faust.Record):
 app = faust.App("stations-stream", broker="kafka://localhost:9092", store="memory://")
 topic = app.topic("connect-stations", value_type=Station)
 out_topic = app.topic("org.chicago.cta.stations.table.v1", partitions=1, value_type=TransformedStation)
-table = app.Table("faust-table", default=str, partitions=1, changelog_topic=out_topic)
+table = app.Table("org.chicago.cta.stations.transformed", default=str, partitions=1, changelog_topic=out_topic)
 
 
 @app.agent(topic)
@@ -47,13 +47,11 @@ async def transform_to_transformed_station(stations):
         else:
             trans_line = "null"
 
-        trans_station = TransformedStation(
+        table[station.station_id] = TransformedStation(
                                             station_id=station.station_id,
                                             station_name=station.station_name,
                                             order=station.order,
-                                            line=trans_line
-                                                )
-        await out_topic.send(value=trans_station)
+                                            line=trans_line)
 
 if __name__ == "__main__":
     app.main()
